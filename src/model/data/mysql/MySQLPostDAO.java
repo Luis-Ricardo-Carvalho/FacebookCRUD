@@ -12,8 +12,9 @@ import java.util.List;
 import model.ModelException;
 import model.Post;
 import model.User;
+import model.data.DAOFactory;
+import model.data.DAOUtils;
 import model.data.PostDAO;
-import model.data.mysql.utils.DAOUtils;
 import model.data.mysql.utils.MySQLConnectionFactory;
 
 public class MySQLPostDAO implements PostDAO {
@@ -57,12 +58,14 @@ public class MySQLPostDAO implements PostDAO {
 			String sqlUpdate = " UPDATE posts "
 					+ " SET "
 					+ " content = ?, "
+					+ " user_id = ?, "
 					+ " post_date = CURDATE() "
 					+ " WHERE id = ?; ";
 			
 			preparedStatement = connection.prepareStatement(sqlUpdate);
 			preparedStatement.setString(1, post.getContent());
-			preparedStatement.setInt(2, post.getId());
+			preparedStatement.setInt(2, post.getUser().getId());
+			preparedStatement.setInt(3, post.getId());
 			
 			preparedStatement.executeUpdate();
 		} catch (SQLException sqle) {
@@ -108,12 +111,11 @@ public class MySQLPostDAO implements PostDAO {
 			connection = MySQLConnectionFactory.getConnection();
 
 			statement = connection.createStatement();
-			String sqlSelect = " SELECT * FROM posts; ";
+			String sqlSeletc = " SELECT * FROM posts order by post_date desc ; ";
 
-			rs = statement.executeQuery(sqlSelect);
+			rs = statement.executeQuery(sqlSeletc);
 
 			setUpUsers(rs, postsList);
-
 		} catch (SQLException sqle) {
 			DAOUtils.sqlExceptionTreatement("Erro ao carregar posts do BD.", sqle);
 		} finally {
@@ -135,13 +137,12 @@ public class MySQLPostDAO implements PostDAO {
 		try {
 			connection = MySQLConnectionFactory.getConnection();
 
-			String sqlSelect = " SELECT * FROM posts WHERE user_id = ?; ";
-
-			preparedStatement = connection.prepareStatement(sqlSelect);
+			String sqlSeletc = " SELECT * FROM posts WHERE user_id = ?; ";
+			preparedStatement = connection.prepareStatement(sqlSeletc);
 			preparedStatement.setInt(1, userId);
-			
+
 			rs = preparedStatement.executeQuery();
-			
+
 			setUpUsers(rs, postsList);
 
 		} catch (SQLException sqle) {
@@ -155,7 +156,8 @@ public class MySQLPostDAO implements PostDAO {
 		return postsList;
 	}
 
-	private void setUpUsers(ResultSet rs, List<Post> postsList) throws SQLException {
+	private void setUpUsers(ResultSet rs, List<Post> postsList)
+            throws SQLException, ModelException {
 		
 		while (rs.next()) {
 			int postId = rs.getInt("id"); 
@@ -166,15 +168,11 @@ public class MySQLPostDAO implements PostDAO {
 			Post newPost = new Post(postId);
 			newPost.setContent(postContent);
 			newPost.setDate(postDate);
-			
-			User postUser = new User(userId);
-			// TODO buscar nomes do usuario
-			postUser.setName("Colocar nome");
+
+			User postUser = DAOFactory.createUserDAO().findById(userId);
 			newPost.setUser(postUser);
 			
 			postsList.add(newPost);
 		}
-		
 	}
-	
 }

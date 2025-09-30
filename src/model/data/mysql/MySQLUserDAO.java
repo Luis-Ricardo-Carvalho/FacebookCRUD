@@ -6,17 +6,17 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 import model.ModelException;
 import model.Post;
 import model.User;
+import model.UserGender;
+import model.data.DAOUtils;
 import model.data.UserDAO;
-import model.data.mysql.utils.DAOUtils;
 import model.data.mysql.utils.MySQLConnectionFactory;
 
-public class MySQLUserDAO implements UserDAO{
+public class MySQLUserDAO implements UserDAO {
 
 	@Override
 	public void save(User user) throws ModelException {
@@ -27,8 +27,8 @@ public class MySQLUserDAO implements UserDAO{
 			connection = MySQLConnectionFactory.getConnection();
 
 			String sqlIsert = " INSERT INTO "
-					+ " users VALUES "
-					+ " (DEFAULT, ?, ?, ?); ";
+					        + " users VALUES "
+					        + " (DEFAULT, ?, ?, ?); ";
 
 			preparedStatement = connection.prepareStatement(sqlIsert);
 			preparedStatement.setString(1, user.getName());
@@ -45,7 +45,7 @@ public class MySQLUserDAO implements UserDAO{
 		finally {
 			DAOUtils.close(preparedStatement);
 			DAOUtils.close(connection);
-		}		
+		}
 	}
 
 	@Override
@@ -56,9 +56,12 @@ public class MySQLUserDAO implements UserDAO{
 		try {
 			connection = MySQLConnectionFactory.getConnection();
 
-			String sqlUpdate = " UPDATE users SET "
-					+ " nome = ?, sexo = ?, "
-					+ " email = ? where id = ?; ";
+			String sqlUpdate = " UPDATE users "
+					         + " set "
+					         + " nome = ?, "
+					         + " sexo = ?, "
+					         + " email = ? "
+					         + " WHERE id = ?; ";
 
 			preparedStatement = connection.prepareStatement(sqlUpdate);
 			preparedStatement.setString(1, user.getName());
@@ -87,9 +90,9 @@ public class MySQLUserDAO implements UserDAO{
 		try {
 			connection = MySQLConnectionFactory.getConnection();
 
-			String sqlDelete = " DELETE FROM users WHERE id = ?; ";
+			String sqlUpdate = " DELETE FROM users WHERE id = ?; ";
 
-			preparedStatement = connection.prepareStatement(sqlDelete);
+			preparedStatement = connection.prepareStatement(sqlUpdate);
 			preparedStatement.setInt(1, user.getId());
 
 			preparedStatement.executeUpdate();
@@ -102,7 +105,7 @@ public class MySQLUserDAO implements UserDAO{
 		finally {
 			DAOUtils.close(preparedStatement);
 			DAOUtils.close(connection);
-		}		
+		}	
 	}
 
 	@Override
@@ -116,19 +119,23 @@ public class MySQLUserDAO implements UserDAO{
 			connection = MySQLConnectionFactory.getConnection();
 
 			statement = connection.createStatement();
-			String sqlSelect = " SELECT * FROM users; ";
+			String sqlSelect = " SELECT * FROM users order by nome; ";
 
 			rs = statement.executeQuery(sqlSelect);
 
 			while (rs.next()) {
 				int id = rs.getInt("id");
 				String name = rs.getString("nome");
-				String gender = rs.getString("sexo");
+				
+				String genderStr = rs.getString("sexo");
+				UserGender gender = 
+						genderStr.equals("M") ? UserGender.M : UserGender.F;
+				
 				String email = rs.getString("email");
 				
 				User user = new User(id);
 				user.setName(name);
-				user.setGender(gender.charAt(0));
+				user.setGender(gender);
 				user.setEmail(email);
 				
 				List<Post> posts = new MySQLPostDAO().findByUserId(id);
@@ -148,4 +155,41 @@ public class MySQLUserDAO implements UserDAO{
 		return usersList;
 	}
 
+	@Override
+	public User findById(int id) throws ModelException {
+		Connection connection = null;
+		PreparedStatement preparedStatement = null;
+		ResultSet rs = null;
+		User user = null;
+
+		try {
+			connection = MySQLConnectionFactory.getConnection();
+
+			String sqlSelect = "SELECT * FROM users WHERE id = ?;";
+			preparedStatement = connection.prepareStatement(sqlSelect);
+			preparedStatement.setInt(1, id);
+
+			rs = preparedStatement.executeQuery();
+
+			if (rs.next()) {
+				String name = rs.getString("nome");
+				String genderStr = rs.getString("sexo");
+				UserGender gender = genderStr.equals("M") ? UserGender.M : UserGender.F;
+				String email = rs.getString("email");
+
+				user = new User(id);
+				user.setName(name);
+				user.setGender(gender);
+				user.setEmail(email);
+			}
+		} catch (SQLException sqle) {
+			DAOUtils.sqlExceptionTreatement("Erro ao buscar user por id no BD.", sqle);
+		} finally {
+			DAOUtils.close(rs);
+			DAOUtils.close(preparedStatement);
+			DAOUtils.close(connection);
+		}
+
+		return user;
+	}
 }

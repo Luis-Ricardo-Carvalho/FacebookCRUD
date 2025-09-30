@@ -16,7 +16,7 @@ public class MySQLConnectionFactory {
 			"jdbc:mysql://127.0.0.1/facebook";
 
 	// Credenciais
-	private static final String USER = "root";
+	private static final String USER = "root"; 
 	private static final String PW = "";
 	
 	public static Connection getConnection() throws ModelException {

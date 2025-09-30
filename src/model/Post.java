@@ -39,4 +39,14 @@ public class Post {
 	public void setUser(User user) {
 		this.user = user;
 	}
+	
+	public void validate() {	
+		if (content == null || content.isBlank()) {
+			throw new IllegalArgumentException("Conteúdo do post não pode ser vazio.");
+		}
+		
+		if (user == null || user.getId() <= 0) {
+			throw new IllegalArgumentException("Usuário inválido para o post.");
+		}
+	}
 }
